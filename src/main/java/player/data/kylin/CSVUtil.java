@@ -2,6 +2,7 @@ package player.data.kylin;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -19,72 +20,86 @@ import org.apache.commons.beanutils.BeanUtils;
 public class CSVUtil {
 
     /**
-     * 生成为CVS文件
+     * list生成为CSV文件
      *
-     * @param exportData 源数据List
-     * @param map        csv文件的列表头map
-     * @param outPutPath 文件路径
-     * @param fileName   文件名称
-     * @return
+     * @param dataList   源数据List
+     * @param headerMap  csv文件的列表头map
+     * @param outputPath 文件路径，以/结尾
+     * @param fileName   文件名称，代码会自动添加.csv后缀
+     * @return 创建的文件对象
      */
     @SuppressWarnings("rawtypes,unused")
-    public static File createCSVFile(List exportData, LinkedHashMap map, String outPutPath,
-                                     String fileName, boolean hasHeader) {
-        File csvFile = null;
-        BufferedWriter csvFileOutputStream = null;
-        try {
-            File file = new File(outPutPath);
-            if (!file.exists()) {
-                file.mkdir();
+    public static File createCSVFile(List dataList,
+                                     LinkedHashMap headerMap,
+                                     String outputPath,
+                                     String fileName,
+                                     boolean hasHeader) {
+
+        File outputDir = new File(outputPath);
+        if (!outputDir.exists()) {
+            outputDir.mkdirs();
+        }
+
+        File csvFile = new File(outputPath + fileName + ".csv");
+        if (!csvFile.exists()) {
+            try {
+                csvFile.createNewFile();
+                //System.out.println("文件新建");
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            //定义文件名格式并创建
-            csvFile = File.createTempFile(fileName, ".csv", new File(outPutPath));
-//            System.out.println("csvFile：" + csvFile);
-//            System.out.println("csvFileName：" + csvFile.getName());
+        } else {
+            //System.out.println("文件已存在");
+            //不用手动删除已存在的文件
+            //csvFile.delete();
+        }
+
+        BufferedWriter csvFileWriter = null;
+
+        try {
 
             // UTF-8使正确读取分隔符","
-            csvFileOutputStream = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
-                    csvFile), "UTF-8"), 1024);
-            System.out.println("csvFileOutputStream：" + csvFileOutputStream);
+            csvFileWriter = new BufferedWriter(
+                    //FileOutputStream(file,false)默认会覆盖原文件而不是追加
+                    new OutputStreamWriter(new FileOutputStream(csvFile), "UTF-8"),
+                    1024);
 
-            if (hasHeader == true) {
+            if (hasHeader) {
                 // 写入文件头部
-                for (Iterator propertyIterator = map.entrySet().iterator(); propertyIterator.hasNext(); ) {
-                    java.util.Map.Entry propertyEntry = (java.util.Map.Entry) propertyIterator.next();
-                    csvFileOutputStream.write("\"" + (String) propertyEntry.getValue() != null ? (String) propertyEntry.getValue() : "" + "\"");
-                    if (propertyIterator.hasNext()) {
-                        csvFileOutputStream.write(",");
+                for (Iterator it = headerMap.entrySet().iterator(); it.hasNext(); ) {
+                    Map.Entry entry = (Map.Entry) it.next();
+                    csvFileWriter.write("\"" + entry.getValue() != null ? (String) entry.getValue() : "" + "\"");
+                    if (it.hasNext()) {
+                        csvFileWriter.write(",");
                     }
                 }
-                csvFileOutputStream.newLine();
+                csvFileWriter.newLine();
             }
-
 
             // 写入文件内容
-            for (Iterator iterator = exportData.iterator(); iterator.hasNext(); ) {
+            for (Iterator it = dataList.iterator(); it.hasNext(); ) {
 
-                Object row = (Object) iterator.next();
+                Object row = it.next();
 
-                for (Iterator propertyIterator = map.entrySet().iterator(); propertyIterator
-                        .hasNext(); ) {
-                    java.util.Map.Entry propertyEntry = (java.util.Map.Entry) propertyIterator
-                            .next();
-                    csvFileOutputStream.write((String) BeanUtils.getProperty(row,
-                            (String) propertyEntry.getKey()));
-                    if (propertyIterator.hasNext()) {
-                        csvFileOutputStream.write(",");
+                for (Iterator it2 = headerMap.entrySet().iterator(); it2.hasNext(); ) {
+                    Map.Entry entry = (Map.Entry) it2.next();
+                    csvFileWriter.write(BeanUtils.getProperty(row, (String) entry.getKey()));
+                    if (it2.hasNext()) {
+                        csvFileWriter.write(",");
                     }
                 }
-                if (iterator.hasNext()) {
-                    csvFileOutputStream.newLine();
+                if (it.hasNext()) {
+                    csvFileWriter.newLine();
                 }
             }
-            csvFileOutputStream.flush();
+            csvFileWriter.flush();
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
             try {
-                csvFileOutputStream.close();
+                if (csvFileWriter != null) {
+                    csvFileWriter.close();
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -102,11 +117,17 @@ public class CSVUtil {
         File file = new File(filePath);
         if (file.exists()) {
             File[] files = file.listFiles();
-            for (int i = 0; i < files.length; i++) {
-                if (files[i].isFile()) {
-                    files[i].delete();
+            if (files == null || files.length == 0) {
+                System.out.println("目录下没有文件");
+
+            } else {
+                for (int i = 0; i < files.length; i++) {
+                    if (files[i].isFile()) {
+                        files[i].delete();
+                    }
                 }
             }
+
         }
     }
 
@@ -134,27 +155,25 @@ public class CSVUtil {
 
     /**
      * 测试数据
-     *
-     * @param args
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
     public static void main(String[] args) {
 
-        List exportData = new ArrayList<Map>();
+        List dataList = new ArrayList<Map>();
 
-        Map row1 = new LinkedHashMap<String, String>();
-        row1.put("1", "11");
-        row1.put("2", "12");
-        row1.put("3", "13");
-        row1.put("4", "14");
-        exportData.add(row1);
+        Map row = new LinkedHashMap<String, String>();
+        row.put("1", "110");
+        row.put("2", "12");
+        row.put("3", "13");
+        row.put("4", "14");
+        dataList.add(row);
 
-        row1 = new LinkedHashMap<String, String>();
-        row1.put("1", "21");
-        row1.put("2", "22");
-        row1.put("3", "23");
-        row1.put("4", "24");
-        exportData.add(row1);
+        row = new LinkedHashMap<String, String>();
+        row.put("1", "210");
+        row.put("2", "22");
+        row.put("3", "23");
+        row.put("4", "24");
+        dataList.add(row);
 
         LinkedHashMap map = new LinkedHashMap();
         map.put("1", "第一列");
@@ -164,10 +183,9 @@ public class CSVUtil {
 
         String path = "/root/Downloads/";
         String fileName = "csv文件导出";
-        File file = CSVUtil.createCSVFile(exportData, map, path, fileName, true);
 
-        String fileName2 = file.getName();
-        System.out.println("文件名称：" + fileName2);
+        createCSVFile(dataList, map, path, fileName, true);
+
     }
 
 }
