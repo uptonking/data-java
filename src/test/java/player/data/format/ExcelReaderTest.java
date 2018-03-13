@@ -32,7 +32,7 @@ public class ExcelReaderTest {
     private ExcelReader<Country> reader;
 
     @Before
-    public void setUp() {
+    public void before() {
 
         ExcelReader.RowConverter<Country> converter = (row) -> new Country((String) row[0], (String) row[1]);
         reader = ExcelReader.builder(Country.class)

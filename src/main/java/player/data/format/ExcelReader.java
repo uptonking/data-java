@@ -15,6 +15,7 @@ import java.util.List;
 
 /**
  * Excel读取器
+ * reads both XLSX, XLS and CSV files and converts Excel rows to Java Objects.
  */
 public class ExcelReader<T> {
 
