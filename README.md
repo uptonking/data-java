@@ -24,8 +24,11 @@ crud
 常用时间维度表的生成
 
 ## format 格式转换
+player.data.format包  
 
-- Excel2CSV
+- Excel2CSV  
 xls/xlsx --> csv
-- CSV2Excel
+- ExcelCSVConverter  
+xlsx <--> csv
+
 
